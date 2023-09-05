@@ -63,20 +63,23 @@ class SensorDataViewModel : ViewModel() {
                 val response: Response = httpClient.newCall(request).execute()
                 response.use {
                     if (response.isSuccessful) {
-                        if(response.body != null){
+                        if (response.body != null) {
                             config = JSONObject(response.body!!.string())
                             configured = true
                         } else {
-                            config = null
+                            config = JSONObject(mapOf("Error" to "No response body"))
+                            configured = false
                         }
                     } else {
-                        config = null
+                        config = JSONObject(mapOf("Error" to "Response not successful"))
+                        configured = false
+
                     }
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            config = null
+            configured = false
         }
     }
 }

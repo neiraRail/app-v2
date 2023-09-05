@@ -70,13 +70,13 @@ class MainActivity : ComponentActivity(), SensorEventListener {
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE)
         magnetometer = sensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
         accelerometer?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
         }
         gyroscope?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
         }
         magnetometer?.let {
-            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_NORMAL)
+            sensorManager.registerListener(this, it, SensorManager.SENSOR_DELAY_FASTEST)
         }
 
         GlobalScope.launch(Dispatchers.Main) {
@@ -142,13 +142,13 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    if (!viewModel.configured) {
+                    if (viewModel.config != null){
                         Column(
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.Center,
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            Text(text = "Cargando...")
+                            Text(text = "Cargando configuración...")
                         }
                     } else {
                         Column {
@@ -170,7 +170,10 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                                     )
                                 }
                                 Text(text = "Sending...", color = sendColor)
-                                Text(text = "Sensor data: $sensorData")
+                                Text(text = "Sensor data:")
+                                for(value in sensorData){
+                                    Text(text = "$value")
+                                }
                             }
                         }
 
@@ -241,7 +244,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     private fun fetchConfig() {
         lifecycleScope.launch {
-            viewModel.fetchConfiguration("{\"node\": 1, \"start\": 0}")
+            viewModel.fetchConfiguration("{\"node\": 666, \"start\": 0}")
         }
     }
 
