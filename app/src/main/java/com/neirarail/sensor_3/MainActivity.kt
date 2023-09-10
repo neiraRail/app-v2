@@ -6,6 +6,7 @@ import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.background
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -34,10 +36,10 @@ import com.neirarail.sensor_3.ui.theme.Sensor_3Theme
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONObject
-import java.time.Instant
 
 class MainActivity : ComponentActivity(), SensorEventListener {
 
@@ -56,6 +58,10 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     private var timeout_lec = 0L
     private var time_lap = 0L
+    private var timeleft: Int by mutableStateOf(0)
+
+    private val jobs = mutableListOf<Job>()
+
 
     @OptIn(DelicateCoroutinesApi::class)
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -81,9 +87,11 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
         GlobalScope.launch(Dispatchers.Main) {
             while (true) {
-                delay(1)
-                if (viewModel.configured && viewModel.config != null) {
+                delay(2)
+                if (viewModel.configured && viewModel.config != null && viewModel.listen) {
+
                     time_lap = (System.currentTimeMillis() - timeout_lec)
+
                     if (time_lap >= (viewModel.config?.get("delay_sensor") as Int)) {
                         timeout_lec = System.currentTimeMillis()
 
@@ -121,20 +129,46 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                             }
                         """.trimIndent()
 
-                            //println(json)
+                            println(json)
 
                             // Use coroutines to send the data to the server
                             lifecycleScope.launch {
                                 viewModel.sendDataToServer(json)
                             }
-                        }
-                        else{
+                        } else {
                             delay((viewModel.config!!.get("delay_sensor") as Int).toLong())
                         }
                     }
                 }
             }
         }
+        val conf = GlobalScope.launch(Dispatchers.Main) {
+            val countRestartFrom = System.currentTimeMillis()
+            var time_update = 0L
+            while (true) {
+                delay(10)
+                if (viewModel.configured && viewModel.config != null) {
+                    // fetch configuration every viewModel.config()["time_reset"] minutes
+                    if ((System.currentTimeMillis() - time_update) >
+                        (viewModel.config!!["delay_update"] as Int) * 60000
+                    ) {
+                        viewModel.updating = true
+                        time_update = System.currentTimeMillis()
+                        fetchConfig()
+                        viewModel.updating = false
+                    } else {
+                        timeleft = ((viewModel.config!!["delay_update"] as Int).times(60000)
+                            .minus(System.currentTimeMillis().minus(time_update))).div(1000).toInt()
+                        delay(1000)
+                    }
+                    if (((viewModel.config!!["time_reset"] as Int) > 0) && (System.currentTimeMillis() - countRestartFrom > (viewModel.config!!["time_reset"] as Int) * 3600000)) { // reinicia cada time_reset horas
+                        restartActivity()
+                    }
+                }
+
+            }
+        }
+        jobs.add(conf)
 
         setContent {
             Sensor_3Theme {
@@ -142,7 +176,7 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    if (viewModel.config != null){
+                    if (viewModel.config == null) {
                         Column(
                             modifier = Modifier.fillMaxSize(),
                             verticalArrangement = Arrangement.Center,
@@ -151,36 +185,72 @@ class MainActivity : ComponentActivity(), SensorEventListener {
                             Text(text = "Cargando configuración...")
                         }
                     } else {
-                        Column {
-                            val sendColor = if (viewModel.sending) Color.Black else Color.LightGray
-                            NodeInfo(viewModel.config as JSONObject)
+                        if (!viewModel.configured) {
                             Column(modifier = Modifier.padding(16.dp)) {
-                                Row(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .background(color = Color.LightGray)
-                                        .padding(6.dp)
-                                ) {
-                                    Text(text = "Nodo ${viewModel.config!!["node"]}")
-                                    Spacer(modifier = Modifier.padding(16.dp))
-                                    //show detail without the \" at the start and the end
-                                    Text(
-                                        text = "Background",
-                                        fontSize = 20.sp
-                                    )
+                                for (key in viewModel.config!!.keys()) {
+                                    Text(text = "$key: ${viewModel.config!![key]}")
                                 }
-                                Text(text = "Sending...", color = sendColor)
-                                Text(text = "Sensor data:")
-                                for(value in sensorData){
-                                    Text(text = "$value")
+                            }
+                        } else {
+                            Column {
+                                NodeInfo(viewModel.config as JSONObject)
+
+                                val sendColor =
+                                    if (viewModel.sending) Color.Black else Color.LightGray
+
+                                val updateColor =
+                                    if (viewModel.updating) Color.Black else Color.LightGray
+
+                                Column(modifier = Modifier.padding(16.dp)) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .background(color = Color.LightGray)
+                                            .padding(6.dp)
+                                    ) {
+                                        Text(text = "Nodo ${viewModel.config!!["node"]}")
+                                        Spacer(modifier = Modifier.padding(16.dp))
+                                        //show detail without the \" at the start and the end
+                                        Text(
+                                            text = "Background",
+                                            fontSize = 20.sp
+                                        )
+                                        Spacer(modifier = Modifier.padding(16.dp))
+                                        Button(onClick = { viewModel.listen = !viewModel.listen }) {
+                                            if (viewModel.listen) {
+                                                Text(text = "Stop")
+                                            } else {
+                                                Text(text = "Start")
+                                            }
+                                        }
+                                    }
+                                    Text(text = "Transmitiendo...", color = sendColor)
+
+                                    Text(
+                                        text = "Configurando en $timeleft segundos",
+                                        color = updateColor
+                                    )
+                                    Text(text = "Sensor data:")
+                                    for (value in sensorData) {
+                                        Text(text = "$value")
+                                    }
                                 }
                             }
                         }
 
                     }
+
+                    Text(text = viewModel.systemMessage)
                 }
             }
         }
+    }
+
+    private fun restartActivity() {
+        for (job in jobs) {
+            job.cancel()
+        }
+        this.recreate()
     }
 
     override fun onPause() {
@@ -220,9 +290,8 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     }
 
-
     override fun onSensorChanged(event: SensorEvent?) {
-        if (viewModel.configured && viewModel.config != null) {
+        if (viewModel.configured && viewModel.config != null && viewModel.listen) {
             if (event?.sensor?.type == Sensor.TYPE_ACCELEROMETER) {
                 sensorData[0] = event.values[0]
                 sensorData[1] = event.values[1]
@@ -244,7 +313,13 @@ class MainActivity : ComponentActivity(), SensorEventListener {
 
     private fun fetchConfig() {
         lifecycleScope.launch {
-            viewModel.fetchConfiguration("{\"node\": 666, \"start\": 0}")
+            try {
+                viewModel.fetchConfiguration("{\"node\": 1, \"start\": 0}")
+            } catch (e: Exception) {
+                e.printStackTrace()
+                delay(3000)
+                restartActivity()
+            }
         }
     }
 
