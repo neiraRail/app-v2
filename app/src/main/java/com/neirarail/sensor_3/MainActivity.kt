@@ -12,8 +12,8 @@ import androidx.compose.material3.Text
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.neirarail.sensor_3.presentation.MainViewModel
 import com.neirarail.sensor_3.presentation.viewModelFactory
-import com.neirarail.sensor_3.sensors.SensorApp
 
 import com.neirarail.sensor_3.ui.theme.Sensor_3Theme
 

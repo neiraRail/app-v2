@@ -35,7 +35,6 @@ abstract class AndroidSensor(
     }
 
     override fun onSensorChanged(event: SensorEvent?) {
-        println("sensor changed")
         if (!doesSensorExist) return
         if(event?.sensor?.type == sensorType){
             onSensorValuesChanged?.invoke(event.values.toList())

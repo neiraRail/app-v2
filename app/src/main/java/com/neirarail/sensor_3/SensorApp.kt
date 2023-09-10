@@ -1,8 +1,8 @@
-package com.neirarail.sensor_3.sensors
+package com.neirarail.sensor_3
 
 import android.app.Application
-import com.neirarail.sensor_3.AppModule
-import com.neirarail.sensor_3.AppModuleImpl
+import com.neirarail.sensor_3.di.AppModule
+import com.neirarail.sensor_3.di.AppModuleImpl
 
 
 class SensorApp: Application() {
