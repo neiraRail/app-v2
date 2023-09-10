@@ -66,11 +66,7 @@ dependencies {
     debugImplementation 'androidx.compose.ui:ui-tooling'
     debugImplementation 'androidx.compose.ui:ui-test-manifest'
 
-    implementation "io.ktor:ktor-client-core:1.6.4"
-    implementation "io.ktor:ktor-client-android:1.6.4"
-    implementation "io.ktor:ktor-client-logging:1.6.4"
-    implementation "io.ktor:ktor-client-serialization:1.6.4"
-    implementation("io.ktor:ktor-client-json:1.6.4")
+    implementation "androidx.lifecycle:lifecycle-viewmodel-compose:2.4.1"
 
     implementation 'com.squareup.okhttp3:okhttp:4.9.3'
 
