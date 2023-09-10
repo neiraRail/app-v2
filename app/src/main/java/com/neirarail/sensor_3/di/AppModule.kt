@@ -1,19 +1,22 @@
 package com.neirarail.sensor_3.di
 
 import android.content.Context
+import com.neirarail.sensor_3.remote.ConfigRepo
 import com.neirarail.sensor_3.remote.ConfigService
+import com.neirarail.sensor_3.remote.TelemetryRepo
 import com.neirarail.sensor_3.remote.TelemetryService
 import com.neirarail.sensor_3.sensors.AccelerometerSensor
 import com.neirarail.sensor_3.sensors.GyroscopeSensor
 import com.neirarail.sensor_3.sensors.MagnetometerSensor
+import com.neirarail.sensor_3.sensors.MeasurableSensor
 
 
 interface AppModule {
-    val accelerometer: AccelerometerSensor
-    val gyroscope: GyroscopeSensor
-    val magnetometer: MagnetometerSensor
-    val configService: ConfigService
-    val telemetryService: TelemetryService
+    val accelerometer: MeasurableSensor
+    val gyroscope: MeasurableSensor
+    val magnetometer: MeasurableSensor
+    val configService: ConfigRepo
+    val telemetryService: TelemetryRepo
 }
 
 class AppModuleImpl(
