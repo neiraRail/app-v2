@@ -37,10 +37,10 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     Column(modifier = Modifier.padding(16.dp)) {
-
                         Text(text = "Sensor data:")
-                        Text(text = "${viewModel.sensorData}")
-
+                        for (i in 0..8) {
+                            Text(text = viewModel.sensorData[i].toString())
+                        }
                     }
                 }
             }
