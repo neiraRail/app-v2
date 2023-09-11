@@ -16,6 +16,18 @@ class MainViewModel(
     private val appModuleImpl: AppModule
 ) : ViewModel() {
 
+    fun toggleActive() {
+        if (config != null) {
+            val newConfig = JSONObject(config.toString())
+            if (config!!["active"] == 1) {
+                newConfig.put("active", 0)
+            } else {
+                newConfig.put("active", 1)
+            }
+            config = newConfig
+        }
+    }
+
     private val _sensorData = mutableStateListOf<Float>(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
     private val _oldSensorData = mutableListOf<Float>(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
 
