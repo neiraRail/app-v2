@@ -25,10 +25,10 @@ class TelemetryService: TelemetryRepo {
                     .build()
 
                 val response: Response = httpClient.newCall(request).execute()
-                println(response.body?.string())
+                //println(response.body?.string())
                 response.use {
                     val responseCode = it.code
-                    println("Data sended properly")
+                    //println("Data sended properly")
                     responseCode == 200 // HTTP_OK
                 }
             }

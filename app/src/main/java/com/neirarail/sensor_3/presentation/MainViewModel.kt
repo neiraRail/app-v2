@@ -9,7 +9,6 @@ import androidx.lifecycle.viewModelScope
 import com.neirarail.sensor_3.di.AppModule
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.json.JSONObject
 
 
@@ -18,6 +17,7 @@ class MainViewModel(
 ) : ViewModel() {
 
     private val _sensorData = mutableStateListOf<Float>(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
+    private val _oldSensorData = mutableListOf<Float>(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
 
     val sensorData: List<Float> = _sensorData
     var config: JSONObject? by mutableStateOf(null)
@@ -46,10 +46,47 @@ class MainViewModel(
             config = appModuleImpl.configService.getConfiguration("{\"node\": 1, \"start\": 0}")
         }
 
+        /**
+         * Send sensor data to server every second
+         */
         viewModelScope.launch {
+            var lectureTime = System.currentTimeMillis()
             while (true) {
-                delay(1000)
-                println("Sensor data: $sensorData")
+                if (config == null) {
+                    delay(1000)
+                    continue
+                }
+                if (config!!["active"] != 1) {
+                    delay(1000)
+                    continue
+                }
+
+                val timePassed = System.currentTimeMillis() - lectureTime
+                if (timePassed < config!!["delay_sensor"] as Int) {
+                    delay(((config!!["delay_sensor"] as Int).div(2)).toLong())
+                    continue
+                }
+                val senseA = 0
+                val senseG = 0
+                if (sensorData[0] - _oldSensorData[0] < senseA &&
+                    sensorData[1] - _oldSensorData[1] < senseA &&
+                    sensorData[2] - _oldSensorData[2] < senseA &&
+                    sensorData[3] - _oldSensorData[3] < senseG &&
+                    sensorData[4] - _oldSensorData[4] < senseG &&
+                    sensorData[5] - _oldSensorData[5] < senseG
+                ) {
+                    continue
+                }
+
+                _oldSensorData[0] = sensorData[0]
+                _oldSensorData[1] = sensorData[1]
+                _oldSensorData[2] = sensorData[2]
+                _oldSensorData[3] = sensorData[3]
+                _oldSensorData[4] = sensorData[4]
+                _oldSensorData[5] = sensorData[5]
+
+                lectureTime = System.currentTimeMillis()
+
                 val telemetry = """
                 {
                     "time": 0,
@@ -70,6 +107,54 @@ class MainViewModel(
                 """.trimIndent()
 
                 appModuleImpl.telemetryService.sendTelemetry(telemetry)
+            }
+        }
+
+        /**
+         * Configure the node
+         */
+        viewModelScope.launch {
+            val countRestartFrom = System.currentTimeMillis()
+            var timeUpdate = 0L
+            while (true) {
+                delay(10)
+                if (config == null) {
+                    continue
+                }
+
+                if (((config!!["time_reset"] as Int) > 0) &&
+                    (System.currentTimeMillis() - countRestartFrom > (config!!["time_reset"] as Int) * 3600000)
+                ) {
+                    //restartActivity()
+                    println("Restart activity")
+                }
+
+                if ((System.currentTimeMillis() - timeUpdate) <= (config!!["delay_update"] as Int) * 60000) {
+//                        timeLeft = ((viewModel.config!!["delay_update"] as Int).times(60000)
+//                            .minus(System.currentTimeMillis().minus(timeUpdate))).div(1000).toInt()
+                    delay(1000)
+                    continue
+                }
+
+                //viewModel.updating = true
+                timeUpdate = System.currentTimeMillis()
+                val newConfig: JSONObject? = try {
+                    appModuleImpl.configService.getConfiguration(
+                        """
+                            {
+                                "node": ${config!!["node"]},
+                                "start": ${config!!["start"]}
+                            }
+                            """.trimIndent()
+                    )
+                } catch (e: Exception) {
+                    println("Error fetching configuration: $e")
+                    null
+                }
+                if (newConfig != null) {
+                    config = newConfig
+                }
+                //viewModel.updating = false
             }
         }
     }
