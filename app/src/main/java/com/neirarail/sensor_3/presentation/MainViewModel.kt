@@ -16,18 +16,6 @@ class MainViewModel(
     private val appModuleImpl: AppModule
 ) : ViewModel() {
 
-    fun toggleActive() {
-        if (config != null) {
-            val newConfig = JSONObject(config.toString())
-            if (config!!["active"] == 1) {
-                newConfig.put("active", 0)
-            } else {
-                newConfig.put("active", 1)
-            }
-            config = newConfig
-        }
-    }
-
     private val _sensorData = mutableStateListOf<Float>(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
     private val _oldSensorData = mutableListOf<Float>(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f)
 
@@ -39,9 +27,11 @@ class MainViewModel(
         appModuleImpl.gyroscope.startListening()
         appModuleImpl.magnetometer.startListening()
         appModuleImpl.accelerometer.setOnSensorValuesChangedListener { values ->
-            _sensorData[0] = values[0]
-            _sensorData[1] = values[1]
-            _sensorData[2] = values[2]
+            if(config != null && config!!["active"] != 0){
+                _sensorData[0] = values[0]
+                _sensorData[1] = values[1]
+                _sensorData[2] = values[2]
+            }
         }
         appModuleImpl.gyroscope.setOnSensorValuesChangedListener { values ->
             _sensorData[3] = values[0]
@@ -111,10 +101,10 @@ class MainViewModel(
                     "gyr_x": ${sensorData[3]},
                     "gyr_y": ${sensorData[4]},
                     "gyr_z": ${sensorData[5]},
-                    "mx": ${sensorData[6]},
-                    "my": ${sensorData[7]},
-                    "mz": ${sensorData[8]},
-                    "tp": 0
+                    "mag_x": ${sensorData[6]},
+                    "mag_y": ${sensorData[7]},
+                    "mag_z": ${sensorData[8]},
+                    "temp": 0
                 }
                 """.trimIndent()
 
@@ -168,6 +158,17 @@ class MainViewModel(
                 }
                 //viewModel.updating = false
             }
+        }
+    }
+    fun toggleActive() {
+        if (config != null) {
+            val newConfig = JSONObject(config.toString())
+            if (config!!["active"] == 1) {
+                newConfig.put("active", 0)
+            } else {
+                newConfig.put("active", 1)
+            }
+            config = newConfig
         }
     }
 }

@@ -20,7 +20,7 @@ class TelemetryService: TelemetryRepo {
 
 
                 val request = Request.Builder()
-                    .url("$serverUrl/events")
+                    .url("$serverUrl/lectura")
                     .post(requestBody)
                     .build()
 
