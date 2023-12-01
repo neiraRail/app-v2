@@ -1,22 +1,25 @@
 package com.neirarail.sensor_3.remote
 
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
-import okhttp3.Protocol
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import org.eclipse.paho.client.mqttv3.MqttClient
+import org.eclipse.paho.client.mqttv3.MqttConnectOptions
+import org.eclipse.paho.client.mqttv3.MqttException
+import org.eclipse.paho.client.mqttv3.MqttMessage
+import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
-import java.net.Socket
+
 
 class TelemetryService : TelemetryRepo {
     private val serverUrl = "http://200.13.4.208:8080"
     private val httpClient = OkHttpClient()
     private val udpSocket = DatagramSocket()
+    private val mqttClient = createMqttClient()
 //    private val tcpSocket = Socket("200.13.4.208", 8079)
 
     private fun sendHttp(telemetry: String): Boolean {
@@ -77,8 +80,21 @@ class TelemetryService : TelemetryRepo {
 //        }
 //    }
 
-    private fun sendMqtt(telemetry: String): Boolean {
-        return true
+    private fun sendMqtt(telemetry: String, qos: Int): Boolean {
+        return try {
+            if (mqttClient == null) {
+                println("Error creating mqtt client")
+                return false
+            }
+            val message = MqttMessage(telemetry.toByteArray())
+            message.qos = qos
+            val topic = "lab/data"
+            mqttClient.publish(topic, message)
+            true
+        } catch (e: MqttException) {
+            e.printStackTrace()
+            false
+        }
     }
 
 
@@ -98,13 +114,38 @@ class TelemetryService : TelemetryRepo {
 //                return sendTcp(telemetry)
             }
 
-            "mqtt" -> {
-                return sendMqtt(telemetry)
+            "mqtt0" -> {
+                return sendMqtt(telemetry, 0)
+            }
+
+            "mqtt1" -> {
+                return sendMqtt(telemetry, 1)
+            }
+
+            "mqtt2" -> {
+                return sendMqtt(telemetry, 2)
             }
 
             else -> {
                 return false
             }
+        }
+    }
+
+    private fun createMqttClient(): MqttClient? {
+        return try {
+            val persistence = MemoryPersistence()
+            val client = MqttClient("tcp://200.13.4.208:1883", "app", persistence)
+
+            val connectOptions = MqttConnectOptions()
+            connectOptions.isCleanSession = true
+
+            client.connect(connectOptions);
+
+            client
+        }catch (e: MqttException) {
+            e.printStackTrace()
+            null
         }
     }
 
