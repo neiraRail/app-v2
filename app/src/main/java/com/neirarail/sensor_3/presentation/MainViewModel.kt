@@ -7,8 +7,10 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.neirarail.sensor_3.di.AppModule
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONObject
 
 
@@ -34,14 +36,18 @@ class MainViewModel(
             }
         }
         appModuleImpl.gyroscope.setOnSensorValuesChangedListener { values ->
-            _sensorData[3] = values[0]
-            _sensorData[4] = values[1]
-            _sensorData[5] = values[2]
+            if(config != null && config!!["active"] != 0) {
+                _sensorData[3] = values[0]
+                _sensorData[4] = values[1]
+                _sensorData[5] = values[2]
+            }
         }
         appModuleImpl.magnetometer.setOnSensorValuesChangedListener { values ->
-            _sensorData[6] = values[0]
-            _sensorData[7] = values[1]
-            _sensorData[8] = values[2]
+            if(config != null && config!!["active"] != 0) {
+                _sensorData[6] = values[0]
+                _sensorData[7] = values[1]
+                _sensorData[8] = values[2]
+            }
         }
 
         viewModelScope.launch {
@@ -92,7 +98,7 @@ class MainViewModel(
                 val telemetry = """
                 {
                     "time": 0,
-                    "time_lap": 0,
+                    "time_lap": ${timePassed},
                     "event": 1,
                     "node": ${config?.get("node")},
                     "acc_x": ${sensorData[0]},
@@ -108,7 +114,13 @@ class MainViewModel(
                 }
                 """.trimIndent()
 
-                appModuleImpl.telemetryService.sendTelemetry(telemetry)
+                withContext(Dispatchers.IO) {
+                    val result = appModuleImpl.telemetryService.sendTelemetry(
+                        telemetry,
+                        config!!["protocol"] as String
+                    )
+                    println("Se envió: $result")
+                }
             }
         }
 
@@ -131,13 +143,14 @@ class MainViewModel(
                     println("Restart activity")
                 }
 
-                if ((System.currentTimeMillis() - timeUpdate) <= (config!!["delay_update"] as Int) * 60000) {
+                if ((System.currentTimeMillis() - timeUpdate) <= (config!!["delay_update"] as Int) * 1000) {
 //                        timeLeft = ((viewModel.config!!["delay_update"] as Int).times(60000)
 //                            .minus(System.currentTimeMillis().minus(timeUpdate))).div(1000).toInt()
                     delay(1000)
                     continue
                 }
 
+                println("Updating configuration...")
                 //viewModel.updating = true
                 timeUpdate = System.currentTimeMillis()
                 val newConfig: JSONObject? = try {
@@ -154,6 +167,7 @@ class MainViewModel(
                     null
                 }
                 if (newConfig != null) {
+                    println(newConfig)
                     config = newConfig
                 }
                 //viewModel.updating = false

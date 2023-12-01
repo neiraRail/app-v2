@@ -11,7 +11,7 @@ import org.json.JSONObject
 class ConfigService : ConfigRepo {
 
     private val httpClient = OkHttpClient()
-    private val serverUrl = "http://129.151.100.69:8080"
+    private val serverUrl = "http://200.13.4.208:8080"
 
     override suspend fun getConfiguration(json: String): JSONObject? {
         println("Fetching configuration...")

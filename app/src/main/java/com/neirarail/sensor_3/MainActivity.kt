@@ -24,11 +24,13 @@ import com.neirarail.sensor_3.presentation.MainViewModel
 import com.neirarail.sensor_3.presentation.viewModelFactory
 
 import com.neirarail.sensor_3.ui.theme.Sensor_3Theme
+import java.text.DecimalFormat
 
 
 class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
+
         super.onCreate(savedInstanceState)
         setContent {
             val viewModel = viewModel<MainViewModel>(
@@ -95,7 +97,12 @@ class MainActivity : ComponentActivity() {
 
                                 Text(text = "Sensor data:")
                                 for (i in 0..8) {
-                                    Text(text = viewModel.sensorData[i].toString())
+                                    var formattedString = DecimalFormat("0.00")
+                                        .format(viewModel.sensorData[i])
+                                    if(formattedString== "-0,00")
+                                        formattedString = "0,00"
+
+                                    Text(text = formattedString)
                                 }
                             }
                         }
