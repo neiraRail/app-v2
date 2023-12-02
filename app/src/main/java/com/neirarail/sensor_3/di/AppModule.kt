@@ -9,6 +9,7 @@ import com.neirarail.sensor_3.sensors.AccelerometerSensor
 import com.neirarail.sensor_3.sensors.GyroscopeSensor
 import com.neirarail.sensor_3.sensors.MagnetometerSensor
 import com.neirarail.sensor_3.sensors.MeasurableSensor
+import com.neirarail.sensor_3.storage.ConfigStorage
 
 
 interface AppModule {
@@ -17,10 +18,11 @@ interface AppModule {
     val magnetometer: MeasurableSensor
     val configService: ConfigRepo
     val telemetryService: TelemetryRepo
+    val configStorage: ConfigStorage
 }
 
 class AppModuleImpl(
-    private val appContext: Context
+    val appContext: Context
 ): AppModule {
     override val accelerometer: AccelerometerSensor by lazy {
         AccelerometerSensor(appContext)
@@ -40,5 +42,9 @@ class AppModuleImpl(
 
     override val telemetryService: TelemetryService by lazy {
         TelemetryService()
+    }
+
+    override val configStorage: ConfigStorage by lazy {
+        ConfigStorage(appContext, "config.json")
     }
 }

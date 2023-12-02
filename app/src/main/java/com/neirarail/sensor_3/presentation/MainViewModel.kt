@@ -1,5 +1,6 @@
 package com.neirarail.sensor_3.presentation
 
+import android.content.Context
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -12,6 +13,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
+import java.io.File
+import java.io.FileWriter
 
 
 class MainViewModel(
@@ -25,6 +28,8 @@ class MainViewModel(
     var config: JSONObject? by mutableStateOf(null)
 
     init {
+
+
         appModuleImpl.accelerometer.startListening()
         appModuleImpl.gyroscope.startListening()
         appModuleImpl.magnetometer.startListening()
@@ -50,8 +55,78 @@ class MainViewModel(
             }
         }
 
+
+        /**
+         * Configure the node
+         */
         viewModelScope.launch {
-            config = appModuleImpl.configService.getConfiguration("{\"node\": 1, \"start\": 0}", "http://200.13.4.208:8080")
+            appModuleImpl.configStorage.readConfigFromStorage()?.let {
+                println(it)
+                config = it
+            }
+            //Si no hay configuración, se crea una nueva
+            if(config == null) {
+                println("Creating new configuration...")
+                config = JSONObject()
+                config!!.put("node", 1)
+                config!!.put("start", 0)
+                config!!.put("rest_server", "http://200.13.4.208:8080")
+                config!!.put("active", 0)
+                config!!.put("detail", "No habia configuración guardada")
+            }
+            else{
+                config!!.put("start", config!!["start"] as Int + 1)
+            }
+
+            config = appModuleImpl.configService.getConfiguration("{\"node\": ${config!!["node"]}, \"start\": ${config!!["start"]}}", config!!["rest_server"] as String)
+            appModuleImpl.configStorage.writeConfigToStorage(config!!)
+
+            val countRestartFrom = System.currentTimeMillis()
+            var timeUpdate = 0L
+            while (true) {
+                delay(10)
+                if (config == null) {
+                    continue
+                }
+
+                if (((config!!["time_reset"] as Int) > 0) &&
+                    (System.currentTimeMillis() - countRestartFrom > (config!!["time_reset"] as Int) * 3600000)
+                ) {
+                    //restartActivity()
+                    println("Restart activity")
+                }
+
+                if ((System.currentTimeMillis() - timeUpdate) <= (config!!["time_update"] as Int) * 1000) {
+//                        timeLeft = ((viewModel.config!!["time_update"] as Int).times(60000)
+//                            .minus(System.currentTimeMillis().minus(timeUpdate))).div(1000).toInt()
+                    delay(1000)
+                    continue
+                }
+
+                println("Updating configuration...")
+                //viewModel.updating = true
+                timeUpdate = System.currentTimeMillis()
+                val newConfig: JSONObject? = try {
+                    appModuleImpl.configService.getConfiguration(
+                        """
+                            {
+                                "node": ${config!!["node"]},
+                                "start": ${config!!["start"]}
+                            }
+                            """.trimIndent(),
+                        config!!["rest_server"] as String
+                    )
+                } catch (e: Exception) {
+                    println("Error fetching configuration: $e")
+                    null
+                }
+                if (newConfig != null) {
+                    println(newConfig)
+                    appModuleImpl.configStorage.writeConfigToStorage(newConfig)
+                    config = newConfig
+                }
+                //viewModel.updating = false
+            }
         }
 
         /**
@@ -122,57 +197,6 @@ class MainViewModel(
                     )
                     println("Se envió: $result")
                 }
-            }
-        }
-
-        /**
-         * Configure the node
-         */
-        viewModelScope.launch {
-            val countRestartFrom = System.currentTimeMillis()
-            var timeUpdate = 0L
-            while (true) {
-                delay(10)
-                if (config == null) {
-                    continue
-                }
-
-                if (((config!!["time_reset"] as Int) > 0) &&
-                    (System.currentTimeMillis() - countRestartFrom > (config!!["time_reset"] as Int) * 3600000)
-                ) {
-                    //restartActivity()
-                    println("Restart activity")
-                }
-
-                if ((System.currentTimeMillis() - timeUpdate) <= (config!!["time_update"] as Int) * 1000) {
-//                        timeLeft = ((viewModel.config!!["time_update"] as Int).times(60000)
-//                            .minus(System.currentTimeMillis().minus(timeUpdate))).div(1000).toInt()
-                    delay(1000)
-                    continue
-                }
-
-                println("Updating configuration...")
-                //viewModel.updating = true
-                timeUpdate = System.currentTimeMillis()
-                val newConfig: JSONObject? = try {
-                    appModuleImpl.configService.getConfiguration(
-                        """
-                            {
-                                "node": ${config!!["node"]},
-                                "start": ${config!!["start"]}
-                            }
-                            """.trimIndent(),
-                        config!!["rest_server"] as String
-                    )
-                } catch (e: Exception) {
-                    println("Error fetching configuration: $e")
-                    null
-                }
-                if (newConfig != null) {
-                    println(newConfig)
-                    config = newConfig
-                }
-                //viewModel.updating = false
             }
         }
     }
