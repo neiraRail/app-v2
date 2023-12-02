@@ -172,9 +172,8 @@ class MainViewModel(
 
                 val telemetry = """
                 {
-                    "time": 0,
-                    "time_lap": ${timePassed},
-                    "event": 1,
+                    "time": ${lectureTime/1000},
+                    "delta": ${timePassed},
                     "node": ${config?.get("node")},
                     "acc_x": ${sensorData[0]},
                     "acc_y": ${sensorData[1]},
@@ -185,7 +184,8 @@ class MainViewModel(
                     "mag_x": ${sensorData[6]},
                     "mag_y": ${sensorData[7]},
                     "mag_z": ${sensorData[8]},
-                    "temp": 0
+                    "temp": 0,
+                    "start": ${config?.get("start")},
                 }
                 """.trimIndent()
 
