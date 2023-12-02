@@ -16,13 +16,12 @@ import java.net.InetAddress
 
 
 class TelemetryService : TelemetryRepo {
-    private val serverUrl = "http://200.13.4.208:8080"
     private val httpClient = OkHttpClient()
     private val udpSocket = DatagramSocket()
     private val mqttClient = createMqttClient()
 //    private val tcpSocket = Socket("200.13.4.208", 8079)
 
-    private fun sendHttp(telemetry: String): Boolean {
+    private fun sendHttp(telemetry: String, serverUrl: String): Boolean {
         return try {
             val mediaType = "application/json; charset=utf-8".toMediaType()
             val requestBody = telemetry.toRequestBody(mediaType)
@@ -98,10 +97,10 @@ class TelemetryService : TelemetryRepo {
     }
 
 
-    override suspend fun sendTelemetry(telemetry: String, protocol: String): Boolean {
+    override suspend fun sendTelemetry(telemetry: String, protocol: String, serverUrl: String): Boolean {
         when (protocol) {
             "http" -> {
-                return sendHttp(telemetry)
+                return sendHttp(telemetry, serverUrl)
             }
 
             "udp" -> {

@@ -51,7 +51,7 @@ class MainViewModel(
         }
 
         viewModelScope.launch {
-            config = appModuleImpl.configService.getConfiguration("{\"node\": 1, \"start\": 0}")
+            config = appModuleImpl.configService.getConfiguration("{\"node\": 1, \"start\": 0}", "http://200.13.4.208:8080")
         }
 
         /**
@@ -70,8 +70,8 @@ class MainViewModel(
                 }
 
                 val timePassed = System.currentTimeMillis() - lectureTime
-                if (timePassed < config!!["delay_sensor"] as Int) {
-                    delay(((config!!["delay_sensor"] as Int).div(2)).toLong())
+                if (timePassed < config!!["time_sensor"] as Int) {
+                    delay(((config!!["time_sensor"] as Int).div(2)).toLong())
                     continue
                 }
                 val senseA = 0
@@ -117,7 +117,8 @@ class MainViewModel(
                 withContext(Dispatchers.IO) {
                     val result = appModuleImpl.telemetryService.sendTelemetry(
                         telemetry,
-                        config!!["protocol"] as String
+                        config!!["protocol"] as String,
+                        config!!["rest_server"] as String
                     )
                     println("Se envió: $result")
                 }
@@ -143,8 +144,8 @@ class MainViewModel(
                     println("Restart activity")
                 }
 
-                if ((System.currentTimeMillis() - timeUpdate) <= (config!!["delay_update"] as Int) * 1000) {
-//                        timeLeft = ((viewModel.config!!["delay_update"] as Int).times(60000)
+                if ((System.currentTimeMillis() - timeUpdate) <= (config!!["time_update"] as Int) * 1000) {
+//                        timeLeft = ((viewModel.config!!["time_update"] as Int).times(60000)
 //                            .minus(System.currentTimeMillis().minus(timeUpdate))).div(1000).toInt()
                     delay(1000)
                     continue
@@ -160,7 +161,8 @@ class MainViewModel(
                                 "node": ${config!!["node"]},
                                 "start": ${config!!["start"]}
                             }
-                            """.trimIndent()
+                            """.trimIndent(),
+                        config!!["rest_server"] as String
                     )
                 } catch (e: Exception) {
                     println("Error fetching configuration: $e")
